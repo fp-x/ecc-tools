@@ -27,7 +27,7 @@ equalConstTime = (b1, b2) ->
 
 pad32 = (msg) ->
   if (msg.length < 32)
-    buf = new Buffer(32)
+    buf = Buffer.alloc(32)
     buf.fill(0)
     msg.copy(buf, 32 - msg.length)
     return buf
@@ -59,7 +59,7 @@ ecctoolkit =
   checksum: (msg, alg) -> @hash(stringify(msg), alg)
 
   xor: (a, b, len=Math.max(a.length, b.length)) ->
-    tmp = new Buffer(len)
+    tmp = Buffer.alloc(len)
     tmp[i] = a[i] ^ b[i] for i in [0...len]
     tmp
 
@@ -73,7 +73,7 @@ ecctoolkit =
 
   isBase58: (str) -> str.match(/^([1-9A-HJ-NP-Za-km-z])+$/)?
 
-  decode58check: (str, mask=(new Buffer(0))) ->
+  decode58check: (str, mask=(Buffer.alloc(0))) ->
     msg = bs58.decode(str)
     payload = msg.slice(0, -4)
     payload if msg.slice(-4).equals(@xor(@sha256sha256(payload), mask, 4))
@@ -82,10 +82,10 @@ ecctoolkit =
     if (msg instanceof Buffer) then msg
     else if (typeof msg is not 'string') then throw new Error('Must be a buffer or a string')
     else if @isBase58(msg) && buf = @decode58check(msg, mask) then buf
-    else if @isHex(msg) then new Buffer(msg, 'hex')
+    else if @isHex(msg) then Buffer.from(msg, 'hex')
     else throw new Error('Unable to decode')
 
-  encode: (msg, mask=(new Buffer(0))) ->
+  encode: (msg, mask=(Buffer.alloc(0))) ->
     checksum = @xor(@sha256sha256(msg), mask, 4)
     bs58.encode Buffer.concat([msg, checksum], msg.length+4)
 
@@ -107,9 +107,9 @@ ecctoolkit =
     secp256k1.signatureExport(sig)
 
   verify: (msg, publicKey, sig) ->
-    msg = new Buffer(msg.toBuffer?() ? msg)
-    sig = new Buffer(sig.toBuffer?() ? sig)
-    publicKey = new Buffer(publicKey.toBuffer?() ? publicKey)
+    msg = Buffer.from(msg.toBuffer?() ? msg)
+    sig = Buffer.from(sig.toBuffer?() ? sig)
+    publicKey = Buffer.from(publicKey.toBuffer?() ? publicKey)
     assert(msg.length > 0, "Message should not be empty")
     assert(msg.length <= 32, "Message is too long")
     sig = secp256k1.signatureImport(sig)
@@ -164,7 +164,7 @@ ecctoolkit =
       switch algorithm
         when 'triplesec'
           new promise (resolve, reject) ->
-            triplesec.encrypt { data: new Buffer(plaintext), key: key }, (err, ciphertext) ->
+            triplesec.encrypt { data: Buffer.from(plaintext), key: key }, (err, ciphertext) ->
               if err? then reject(new Error(err))
               else resolve(ciphertext)
         else
@@ -172,7 +172,7 @@ ecctoolkit =
           firstChunk = cipher.update(plaintext)
           secondChunk = cipher.final()
           Buffer.concat([firstChunk, secondChunk])
-    .then (ciphertext) -> new Buffer(ciphertext)
+    .then (ciphertext) -> Buffer.from(ciphertext)
 
   decipher: (ciphertext, key, iv, algorithm=DefaultAlgoritm) ->
     promise.resolve(ciphertext).then (ciphertext) ->
@@ -193,8 +193,8 @@ ecctoolkit =
     .then (plaintext) -> JSON.parse(plaintext)
 
   reverse: (buf) ->
-    if (typeof buf is 'string') then buf = new Buffer(buf, 'hex')
-    tmp = new Buffer(buf.length)
+    if (typeof buf is 'string') then buf = Buffer.from(buf, 'hex')
+    tmp = Buffer.alloc(buf.length)
     for b, i in buf
       tmp[buf.length-1-i] = b
     tmp
